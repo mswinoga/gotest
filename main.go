@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 )
 
 // loggingTransport wraps a RoundTripper to show explicit usage of Transport.
@@ -37,7 +38,7 @@ func dialOverrideFromContext(ctx context.Context) (string, bool) {
 }
 
 var (
-	defaultDialer   = &net.Dialer{}
+	defaultDialer   = &net.Dialer{Timeout: 500 * time.Millisecond}
 	sharedTransport = &http.Transport{
 		ForceAttemptHTTP2: true,
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
