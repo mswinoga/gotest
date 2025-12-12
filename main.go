@@ -13,19 +13,6 @@ import (
 	"time"
 )
 
-// loggingTransport wraps a RoundTripper to show explicit usage of Transport.
-type loggingTransport struct {
-	base http.RoundTripper
-}
-
-func (t *loggingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	rt := t.base
-	if rt == nil {
-		rt = http.DefaultTransport
-	}
-	return rt.RoundTrip(req)
-}
-
 type dialOverrideKey struct{}
 
 func withDialOverride(ctx context.Context, addr string) context.Context {
@@ -38,17 +25,15 @@ func dialOverrideFromContext(ctx context.Context) (string, bool) {
 }
 
 var (
-	defaultDialer   = &net.Dialer{Timeout: 500 * time.Millisecond}
 	sharedTransport = &http.Transport{
 		ForceAttemptHTTP2: true,
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			if override, ok := dialOverrideFromContext(ctx); ok {
 				addr = override
 			}
-			return defaultDialer.DialContext(ctx, network, addr)
+			return (&net.Dialer{Timeout: 500 * time.Millisecond}).DialContext(ctx, network, addr)
 		},
 	}
-	sharedRoundTripper = &loggingTransport{base: sharedTransport}
 )
 
 func main() {
@@ -88,7 +73,7 @@ func main() {
 		req = req.WithContext(withDialOverride(req.Context(), dialAddr))
 	}
 
-	resp, err := sharedRoundTripper.RoundTrip(req)
+	resp, err := sharedTransport.RoundTrip(req)
 	if err != nil {
 		log.Fatalf("request failed: %v", err)
 	}
